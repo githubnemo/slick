@@ -21,6 +21,8 @@ dies ist ein satz" | slick 'tell the language of the following sentence: {stdin_
 If you use vim you can use it to augment your code with whatever you need,
 code completion, summarization, whatever the LLM is capable of.
 
+https://github.com/githubnemo/slick/assets/264196/118d8e88-7751-4ceb-b3f4-ddc00705c1c1
+
 # Installation
 
 Put `slick` to somewhere in your `$PATH`.

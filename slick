@@ -88,18 +88,41 @@ def model_format_prompt(prompt):
 async def main(args):
     prompt = args.prompt
     remote = LlamaCppRemoteModel(url=args.server_address)
+
+    # modes of operation:
+    #
+    # - block: pass in stdin fully as one block of text, generate one output
+    # - line: pass one line of stdin, generate one output, no state
+    # - stream: pass one line of stdin, generate one output, stateful
+    #
+    # TODO: streaming is not implemented yet as this would be infficient with
+    # the standard llama.cpp server. Ideally the server would implement a
+    # sliding window approach. Then we could feed the input line-by-line,
+    # generate output and repeat with a new line.
+    #
+    # streaming is, i think, only useful when input and output can be
+    # intermixed to record the current state to set off of given the next
+    # input.
+
     line_wise = False
+    stateful = False
 
     if "{stdin}" in prompt:
         prompt = prompt.format(stdin="".join(sys.stdin.readlines()))
     elif "{stdin_line}" in prompt:
         stdin_lines = [n.strip() for n in sys.stdin.readlines()]
         line_wise = True
+        stateful = False
+    elif "{stdin_stream}" in prompt:
+        stdin_lines = [n.strip() for n in sys.stdin.readlines()]
+        line_wise = True
+        stateful = False
 
     if line_wise:
-        # TODO this case might benefit from async and/or batching
+        # TODO this case might benefit from batched processing
         for line in stdin_lines:
             prompt = model_format_prompt(prompt)
+
             async for part in generate(
                 remote=remote,
                 prompt=prompt.format(stdin_line=line),

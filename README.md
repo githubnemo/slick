@@ -25,8 +25,14 @@ https://github.com/githubnemo/slick/assets/264196/118d8e88-7751-4ceb-b3f4-ddc007
 
 # Installation
 
-Put `slick` to somewhere in your `$PATH`.
+Run
 
-You will need a working `llama.cpp` folder with mistral-7b and a server binary.
-This is very rough for now. See the [`launch_server.sh`](./launch_server.sh)
-script for details.
+    poetry install
+
+Then, assuming you `~/bin` folder is in your path, run:
+
+    ln -s `poetry run which slick` ~/bin/slick
+
+You will need a working `llama.cpp` folder with mistral-7b-instruct and a
+server binary.  This is very rough for now. See the
+[`launch_server.sh`](./launch_server.sh) script for details.

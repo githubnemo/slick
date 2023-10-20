@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "slick"
+version = "0.1.0"
+description = ""
+authors = ["nemo <git@ningu.net>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+aiohttp = "^3.8.6"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.10.0"
+flake8 = "^6.1.0"
+
+[tool.poetry.scripts]
+slick = "slick.slick:cli"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

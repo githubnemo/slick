@@ -148,7 +148,7 @@ async def main(args):
         print('\0', end='')
 
 
-if __name__ == "__main__":
+def cli():
     parser = argparse.ArgumentParser()
     parser.add_argument("prompt")
     parser.add_argument("--max-length", type=int, default=500)
@@ -165,3 +165,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     asyncio.run(main(args))
+
+
+if __name__ == "__main__":
+    cli()

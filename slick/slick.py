@@ -67,15 +67,16 @@ class LlamaCppRemoteModel(RemoteModel):
             do_stream=do_stream,
         ):
             if chunk == 'data: [DONE]\n':
-                yield partial_result
+                return
             elif chunk.startswith('data: '):
                 chunk = json.loads(chunk[6:])
                 for choice in chunk['choices']:
                     for key in choice['delta']:
-                        if key in partial_result and partial_result[key] is not None:
-                            partial_result[key] += choice['delta'][key]
-                        else:
-                            partial_result[key] = choice['delta'][key]
+                        if (
+                            'content' in choice['delta']
+                            and choice['delta']['content'] is not None
+                        ):
+                            yield choice['delta']['content']
 
 
 
@@ -137,7 +138,6 @@ async def main(args):
                 n_predict=args.max_length,
                 do_stream=args.do_stream,
             ):
-                part = part['content']
                 print(part, end='')
 
             if part is not None:
@@ -154,8 +154,7 @@ async def main(args):
                 n_predict=args.max_length,
                 do_stream=args.do_stream,
         ):
-            part = part['content']
-            print(part, end='')
+            print(part, end='', flush=True)
 
         if part is not None:
             if not part.endswith('\n'):

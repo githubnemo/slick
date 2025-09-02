@@ -2,6 +2,7 @@
 import argparse
 import asyncio
 import json
+import os
 import sys
 
 from urllib.parse import urljoin
@@ -28,11 +29,11 @@ class LlamaCppRemoteModel(RemoteModel):
         temperature=0.2,
         top_k=40,
         top_p=0.9,
-        stop="[INST]",
+        stop="<|end_of_text|>",
         stream=False,
     ):
         return dict(
-            prompt=prompt,
+            messages=[{'role': 'user', 'content': prompt}],
             temperature=temperature,
             top_k=top_k,
             top_p=top_p,
@@ -58,16 +59,24 @@ class LlamaCppRemoteModel(RemoteModel):
             **kwargs
         )
 
+        partial_result = {}
+
         async for chunk in self._post(
-            url=urljoin(self.url, '/completion'),
+            url=urljoin(self.url, '/chat/completions'),
             data=data,
             do_stream=do_stream,
         ):
-            if chunk.startswith('data: '):
+            if chunk == 'data: [DONE]\n':
+                yield partial_result
+            elif chunk.startswith('data: '):
                 chunk = json.loads(chunk[6:])
-                yield chunk['content']
-            else:
-                yield json.loads(chunk)['content']
+                for choice in chunk['choices']:
+                    for key in choice['delta']:
+                        if key in partial_result and partial_result[key] is not None:
+                            partial_result[key] += choice['delta'][key]
+                        else:
+                            partial_result[key] = choice['delta'][key]
+
 
 
 async def generate(remote, prompt, **kwargs):
@@ -80,9 +89,7 @@ def debug(msg):
 
 
 def model_format_prompt(prompt):
-    if "[INST]" not in prompt:
-        return f"[INST]{prompt}[/INST]"
-    return prompt
+    return prompt  # let server handle prompt tokens
 
 
 async def main(args):
@@ -122,6 +129,7 @@ async def main(args):
         # TODO this case might benefit from batched processing
         for line in stdin_lines:
             prompt = model_format_prompt(prompt)
+            part = None
 
             async for part in generate(
                 remote=remote,
@@ -129,23 +137,34 @@ async def main(args):
                 n_predict=args.max_length,
                 do_stream=args.do_stream,
             ):
+                part = part['content']
                 print(part, end='')
-            if not part.endswith('\n'):
-                print()
-            print('\0', end='')
+
+            if part is not None:
+                if not part.endswith('\n'):
+                    print()
+                print('\0', end='')
 
     else:
         prompt = model_format_prompt(prompt)
+        part = None
         async for part in generate(
                 remote=remote,
                 prompt=prompt,
                 n_predict=args.max_length,
                 do_stream=args.do_stream,
         ):
+            part = part['content']
             print(part, end='')
-        if not part.endswith('\n'):
-            print()
-        print('\0', end='')
+
+        if part is not None:
+            if not part.endswith('\n'):
+                print()
+            print('\0', end='')
+
+
+def get_address_from_env():
+    return os.environ.get("SLICK_SERVER_ADDRESS",  "http://127.0.0.1:8080")
 
 
 def cli():
@@ -160,7 +179,8 @@ def cli():
 
     # use protocol as well if someone wants to outsource their server and
     # serve via https instead of tunneling
-    parser.add_argument("--server-address", type=str, default="http://127.0.0.1:8080")
+    parser.add_argument("--server-address", type=str,
+                        default=get_address_from_env())
 
     args = parser.parse_args()
 
